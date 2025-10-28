@@ -1,0 +1,28 @@
+# Virtual environment
+venv/
+env/
+
+# Session files (contains login credentials)
+session.json
+*.json
+.instagram_user
+
+# Downloaded media files
+downloads/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+.DS_Store

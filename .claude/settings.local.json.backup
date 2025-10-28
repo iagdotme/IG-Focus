@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python3:*)",
+      "Bash(source venv/bin/activate)",
+      "Bash(python:*)",
+      "Bash(awk:*)",
+      "Bash(pip show:*)",
+      "Bash(op whoami:*)",
+      "Bash(op account:*)",
+      "Bash(op signin:*)",
+      "Bash(op vault:*)",
+      "Bash(op item list:*)",
+      "Read(//Users/iagdotme/.claude/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
