@@ -200,9 +200,11 @@ body {
 
 /* ===== FEED ===== */
 .feed {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: 30px;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 /* ===== POST CARD ===== */
@@ -525,7 +527,7 @@ body {
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 768px) {
     .feed {
-        grid-template-columns: 1fr;
+        max-width: 100%;
     }
 
     .header-content {
