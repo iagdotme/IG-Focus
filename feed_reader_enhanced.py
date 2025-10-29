@@ -413,40 +413,63 @@ def display_post_info(post_data: dict) -> None:
 
 
 def load_existing_posts(directory: str = ".") -> dict:
-    """Load all existing post IDs from previous feed JSON files"""
+    """Load all existing post IDs from master feed and backup files"""
     existing_posts = {}
-    
-    # Find all feed_enhanced_*.json files
-    json_files = list(Path(directory).glob("feed_enhanced_*.json"))
-    
-    if not json_files:
-        return existing_posts
-    
-    print(f"\n🔍 Checking {len(json_files)} existing feed file(s) for duplicates...")
-    
-    for json_file in json_files:
+
+    # Check master feed first
+    master_feed = Path(directory) / "feed_master.json"
+
+    if master_feed.exists():
+        print(f"\n🔍 Checking master feed for duplicates...")
         try:
-            with open(json_file, 'r', encoding='utf-8') as f:
+            with open(master_feed, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                
+
             # Handle both array and object formats
             posts = data if isinstance(data, list) else data.get('posts', [])
-            
+
             for post in posts:
                 post_id = post.get('id')
                 if post_id:
                     existing_posts[post_id] = {
-                        'file': json_file.name,
+                        'file': 'feed_master.json',
                         'user': post.get('user'),
                         'timestamp': post.get('timestamp_human')
                     }
+
+            print(f"  ✓ Found {len(existing_posts)} existing posts in master feed")
         except Exception as e:
-            print(f"  ⚠ Warning: Could not read {json_file.name}: {e}")
-            continue
-    
-    if existing_posts:
-        print(f"  ✓ Found {len(existing_posts)} existing posts across all files")
-    
+            print(f"  ⚠ Warning: Could not read master feed: {e}")
+    else:
+        # Fallback: check old feed_enhanced_*.json and feed_backup_*.json files
+        json_files = list(Path(directory).glob("feed_enhanced_*.json")) + list(Path(directory).glob("feed_backup_*.json"))
+
+        if json_files:
+            print(f"\n🔍 Checking {len(json_files)} existing feed file(s) for duplicates...")
+
+            for json_file in json_files:
+                try:
+                    with open(json_file, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+
+                    # Handle both array and object formats
+                    posts = data if isinstance(data, list) else data.get('posts', [])
+
+                    for post in posts:
+                        post_id = post.get('id')
+                        if post_id:
+                            existing_posts[post_id] = {
+                                'file': json_file.name,
+                                'user': post.get('user'),
+                                'timestamp': post.get('timestamp_human')
+                            }
+                except Exception as e:
+                    print(f"  ⚠ Warning: Could not read {json_file.name}: {e}")
+                    continue
+
+            if existing_posts:
+                print(f"  ✓ Found {len(existing_posts)} existing posts across all files")
+
     return existing_posts
 
 
@@ -551,28 +574,71 @@ def main():
 
         all_posts_data.append(post_data)
 
-    # Sort chronologically if requested
-    if sort_chronological and all_posts_data:
-        print("\n📅 Sorting posts chronologically (newest first)...")
-        all_posts_data.sort(key=lambda p: p['timestamp'] or 0, reverse=True)
+    # Determine master feed filename
+    master_feed = "feed_master.json"
 
-    # Save to JSON with timestamp
+    # Load and merge with existing master feed if it exists
+    if Path(master_feed).exists():
+        print(f"\n📚 Loading existing master feed: {master_feed}")
+        try:
+            with open(master_feed, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+
+            # Handle both array and object formats
+            existing_posts = existing_data if isinstance(existing_data, list) else existing_data.get('posts', [])
+
+            print(f"  Found {len(existing_posts)} existing posts")
+            print(f"  Merging with {len(all_posts_data)} new posts...")
+
+            # Merge: add new posts to existing ones
+            # Build a set of existing IDs for quick lookup
+            existing_ids = {p['id'] for p in existing_posts}
+
+            # Only add truly new posts (shouldn't happen if duplicate detection worked, but safety check)
+            new_posts_to_add = [p for p in all_posts_data if p['id'] not in existing_ids]
+
+            # Combine
+            combined_posts = existing_posts + new_posts_to_add
+
+            print(f"  Total posts after merge: {len(combined_posts)}")
+
+        except Exception as e:
+            print(f"  ⚠ Warning: Could not load master feed: {e}")
+            print(f"  Creating new master feed...")
+            combined_posts = all_posts_data
+    else:
+        print(f"\n📝 Creating new master feed: {master_feed}")
+        combined_posts = all_posts_data
+
+    # Sort chronologically if requested (or if master feed exists, always sort)
+    if (sort_chronological or Path(master_feed).exists()) and combined_posts:
+        print("\n📅 Sorting all posts chronologically (newest first)...")
+        combined_posts.sort(key=lambda p: p['timestamp'] or 0, reverse=True)
+
+    # Save master feed
+    with open(master_feed, 'w', encoding='utf-8') as f:
+        json.dump(combined_posts, f, indent=2, ensure_ascii=False)
+
+    print(f"\n✓ Master feed saved to {master_feed}")
+
+    # Also create timestamped backup
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     suffix = "_chrono" if sort_chronological else ""
     suffix += "_no_ads" if skip_sponsored else ""
-    filename = f"feed_enhanced_{timestamp}{suffix}.json"
+    backup_filename = f"feed_backup_{timestamp}{suffix}.json"
 
-    with open(filename, 'w', encoding='utf-8') as f:
-        json.dump(all_posts_data, f, indent=2, ensure_ascii=False)
+    with open(backup_filename, 'w', encoding='utf-8') as f:
+        json.dump(combined_posts, f, indent=2, ensure_ascii=False)
 
-    print(f"\n✓ Feed data saved to {filename}")
+    print(f"✓ Backup saved to {backup_filename}")
 
     # Summary
     print("\n" + "="*80)
     print("SUMMARY".center(80))
     print("="*80)
     print(f"Posts processed: {len(posts)}")
-    print(f"Posts saved: {len(all_posts_data)}")
+    print(f"New posts added: {len(all_posts_data)}")
+    print(f"Total posts in master feed: {len(combined_posts)}")
     if skipped_duplicates > 0:
         print(f"Duplicates skipped: {skipped_duplicates} ⏭")
     if skipped_sponsored > 0:

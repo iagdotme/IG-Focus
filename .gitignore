@@ -4,8 +4,15 @@ env/
 
 # Session files (contains login credentials)
 session.json
-*.json
 .instagram_user
+
+# Feed data (keep feed_master.json tracked, backup others)
+feed_backup_*.json
+feed_enhanced_*.json
+
+# Keep feed_master.json in git if you want version control
+# Uncomment the line below to exclude it:
+# feed_master.json
 
 # Downloaded media files
 downloads/
