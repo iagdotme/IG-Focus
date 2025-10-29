@@ -4,6 +4,7 @@ A Python-based tool to access, archive, and download content from your Instagram
 
 ## Features
 
+### Archive & Download
 - Full 2FA (two-factor authentication) support
 - Session reuse - no repeated logins
 - Download photos, videos, and albums
@@ -11,6 +12,15 @@ A Python-based tool to access, archive, and download content from your Instagram
 - Extract comprehensive metadata
 - Human-readable timestamps
 - Organized JSON output with timestamps
+
+### Web Viewer 🎨 NEW!
+- Beautiful Instagram-like web interface
+- View downloaded feeds offline in your browser
+- No server required - pure HTML/CSS/JavaScript
+- Fully accessible with keyboard navigation
+- Filter by type, search by content
+- Lightbox for full-size media viewing
+- See [viewer/README.md](viewer/README.md) for details
 
 ## Setup
 
@@ -33,10 +43,21 @@ A Python-based tool to access, archive, and download content from your Instagram
 
 ## Quick Start
 
-For most users, start with the enhanced feed reader:
+### 1. Download Your Feed
 
 ```bash
 python feed_reader_enhanced.py
+```
+
+### 2. View Your Feed
+
+Open `viewer/index.html` in your browser to view your downloaded feed in a beautiful, Instagram-like interface.
+
+For best results with local media files:
+```bash
+# Run from the ig/ directory
+python3 -m http.server 8000
+# Then open: http://localhost:8000/viewer/
 ```
 
 ## Usage Options
@@ -211,14 +232,18 @@ Once you've logged in successfully, a `session.json` file is created. Future log
 ```
 ig/
 ├── feed_reader_enhanced.py    # Full-featured reader (RECOMMENDED)
-├── feed_reader.py             # Basic reader
 ├── login_with_2fa.py          # 2FA authentication utility
-├── simple_example.py          # Minimal example
 ├── requirements.txt           # Python dependencies
 ├── README.md                  # This file
 ├── CLAUDE.md                  # Developer guide
 ├── FEATURES.md                # Detailed feature comparison
-└── downloads/                 # Downloaded media (created on first use)
+├── viewer/                    # Web viewer for viewing feeds
+│   ├── index.html            # Main viewer page
+│   ├── styles.css            # Instagram-like styling
+│   ├── script.js             # Feed display logic
+│   └── README.md             # Viewer documentation
+├── downloads/                 # Downloaded media (created on first use)
+└── archive/                   # Archived old scripts
 ```
 
 ## Additional Documentation

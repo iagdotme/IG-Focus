@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IG Focus - Feed Viewer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>📸 IG Focus Viewer</h1>
+                <div class="header-controls">
+                    <label for="feed-file-input" class="file-button">
+                        📂 Load Feed JSON
+                    </label>
+                    <input type="file" id="feed-file-input" accept=".json" style="display: none;">
+                    <span id="post-count" class="post-count"></span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Instructions -->
+        <div id="instructions" class="instructions">
+            <div class="instruction-card">
+                <h2>👋 Welcome to IG Focus Viewer</h2>
+                <p>View your downloaded Instagram feed in an accessible, easy-to-read format.</p>
+                <ol>
+                    <li>Click <strong>"📂 Load Feed JSON"</strong> above</li>
+                    <li>Select your feed JSON file (e.g., <code>feed_enhanced_YYYYMMDD_HHMMSS.json</code>)</li>
+                    <li>View your posts with photos, videos, captions, and comments</li>
+                </ol>
+                <div class="features">
+                    <h3>Features:</h3>
+                    <ul>
+                        <li>✅ View photos, videos, and albums</li>
+                        <li>✅ Read captions and comments</li>
+                        <li>✅ See engagement stats (likes, comments)</li>
+                        <li>✅ Filter by media type</li>
+                        <li>✅ Keyboard accessible</li>
+                        <li>✅ Responsive design</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div id="filters" class="filters" style="display: none;">
+            <div class="filter-group">
+                <label for="type-filter">Filter by type:</label>
+                <select id="type-filter">
+                    <option value="all">All Posts</option>
+                    <option value="photo">Photos</option>
+                    <option value="video">Videos</option>
+                    <option value="album">Albums</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="search-filter">Search:</label>
+                <input type="text" id="search-filter" placeholder="Search captions, usernames...">
+            </div>
+        </div>
+
+        <!-- Feed Container -->
+        <main id="feed" class="feed">
+            <!-- Posts will be dynamically inserted here -->
+        </main>
+
+        <!-- Loading State -->
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading feed...</p>
+        </div>
+
+        <!-- Error State -->
+        <div id="error" class="error" style="display: none;">
+            <p>❌ Error loading feed. Please check the file and try again.</p>
+        </div>
+    </div>
+
+    <!-- Lightbox for images/videos -->
+    <div id="lightbox" class="lightbox" style="display: none;">
+        <div class="lightbox-content">
+            <button class="lightbox-close" aria-label="Close">&times;</button>
+            <button class="lightbox-prev" aria-label="Previous">&lt;</button>
+            <button class="lightbox-next" aria-label="Next">&gt;</button>
+            <div id="lightbox-media" class="lightbox-media"></div>
+            <div id="lightbox-caption" class="lightbox-caption"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
