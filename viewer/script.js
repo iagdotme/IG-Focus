@@ -555,7 +555,7 @@ function formatNumber(num) {
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
-    return div.innerHTML;
+    return div.innerHTML.replace(/\n/g, '<br>');
 }
 
 function formatDate(dateString) {
