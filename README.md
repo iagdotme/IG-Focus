@@ -72,6 +72,7 @@ python feed_reader_enhanced.py
 
 Features:
 - ✅ **Full 2FA support** & session reuse (no repeated logins!)
+- ✅ **Duplicate detection** - Skip posts you've already downloaded
 - ✅ **Download media** - Photos, videos, and albums
 - ✅ **Fetch comments** - Get all comments on posts
 - ✅ **Human-readable timestamps** - Formatted dates
@@ -127,6 +128,17 @@ python simple_example.py
 ```
 
 ⚠️ **Note:** This script doesn't support 2FA. Use Option 1 or 2 if you have 2FA enabled.
+
+## Duplicate Detection
+
+When you run the feed reader again, it will:
+- Scan all existing `feed_enhanced_*.json` files
+- Detect posts you've already downloaded (by post ID)
+- Skip duplicates to avoid re-downloading
+- Show which file contains each duplicate
+- Only download new posts
+
+This means you can run it daily/weekly to capture new posts without wasting time on duplicates!
 
 ## What You Can Access
 
