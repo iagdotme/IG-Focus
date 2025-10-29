@@ -412,6 +412,44 @@ def display_post_info(post_data: dict) -> None:
         print(f"Caption: {caption}")
 
 
+def load_existing_posts(directory: str = ".") -> dict:
+    """Load all existing post IDs from previous feed JSON files"""
+    existing_posts = {}
+    
+    # Find all feed_enhanced_*.json files
+    json_files = list(Path(directory).glob("feed_enhanced_*.json"))
+    
+    if not json_files:
+        return existing_posts
+    
+    print(f"\n🔍 Checking {len(json_files)} existing feed file(s) for duplicates...")
+    
+    for json_file in json_files:
+        try:
+            with open(json_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                
+            # Handle both array and object formats
+            posts = data if isinstance(data, list) else data.get('posts', [])
+            
+            for post in posts:
+                post_id = post.get('id')
+                if post_id:
+                    existing_posts[post_id] = {
+                        'file': json_file.name,
+                        'user': post.get('user'),
+                        'timestamp': post.get('timestamp_human')
+                    }
+        except Exception as e:
+            print(f"  ⚠ Warning: Could not read {json_file.name}: {e}")
+            continue
+    
+    if existing_posts:
+        print(f"  ✓ Found {len(existing_posts)} existing posts across all files")
+    
+    return existing_posts
+
+
 def main():
     """Enhanced feed reader with all features"""
 
@@ -450,10 +488,14 @@ def main():
     # Options
     print("\n" + "="*80)
     amount = int(input("How many posts to fetch? (default: 20): ").strip() or "20")
+    skip_duplicates = input("Skip posts you've already downloaded? (Y/n): ").strip().lower() != 'n'
     skip_sponsored = input("Skip sponsored/paid partnership posts? (y/N): ").strip().lower() == 'y'
     sort_chronological = input("Sort chronologically (newest first)? (y/N): ").strip().lower() == 'y'
     fetch_comments = input("Fetch comments? (y/N): ").strip().lower() == 'y'
     download_media_files = input("Download media files? (y/N): ").strip().lower() == 'y'
+
+    # Load existing posts for duplicate detection
+    existing_posts = load_existing_posts() if skip_duplicates else {}
 
     # Fetch posts
     posts = get_feed_posts(cl, amount)
@@ -468,6 +510,8 @@ def main():
     print("="*80)
 
     all_posts_data = []
+    skipped_duplicates = 0
+    skipped_sponsored = 0
 
     for i, post in enumerate(posts, 1):
         print(f"\n[{i}/{len(posts)}] Processing...", end=" ")
@@ -475,9 +519,18 @@ def main():
         # Extract data with proper Media object (includes sponsor_tags!)
         post_data = extract_post_data(cl, post)
 
+        # Skip duplicates if requested
+        if skip_duplicates and post_data['id'] in existing_posts:
+            existing_info = existing_posts[post_data['id']]
+            print(f"⏭ Skipping duplicate (already in {existing_info['file']})")
+            print(f"   @{existing_info['user']} - {existing_info['timestamp']}")
+            skipped_duplicates += 1
+            continue
+
         # Skip sponsored posts if requested
         if skip_sponsored and post_data['is_sponsored']:
             print(f"⏭ Skipping sponsored post from @{post_data['user']}")
+            skipped_sponsored += 1
             continue
 
         print("✓")
@@ -518,15 +571,18 @@ def main():
     print("\n" + "="*80)
     print("SUMMARY".center(80))
     print("="*80)
-    print(f"Posts fetched: {len(all_posts_data)}")
-    print(f"Photos: {sum(1 for p in all_posts_data if p['media_type_name'] == 'photo')}")
+    print(f"Posts processed: {len(posts)}")
+    print(f"Posts saved: {len(all_posts_data)}")
+    if skipped_duplicates > 0:
+        print(f"Duplicates skipped: {skipped_duplicates} ⏭")
+    if skipped_sponsored > 0:
+        print(f"Sponsored skipped: {skipped_sponsored} ⏭")
+    print(f"\nPhotos: {sum(1 for p in all_posts_data if p['media_type_name'] == 'photo')}")
     print(f"Videos: {sum(1 for p in all_posts_data if p['media_type_name'] == 'video')}")
     print(f"Albums: {sum(1 for p in all_posts_data if p['media_type_name'] == 'album')}")
     sponsored_count = sum(1 for p in all_posts_data if p.get('is_sponsored', False))
     if sponsored_count > 0:
-        print(f"Sponsored posts: {sponsored_count}")
-        if skip_sponsored:
-            print(f"  (additional sponsored posts were skipped)")
+        print(f"Sponsored posts included: {sponsored_count}")
     if fetch_comments:
         total_comments = sum(len(p.get('comments', [])) for p in all_posts_data)
         print(f"Comments fetched: {total_comments}")
