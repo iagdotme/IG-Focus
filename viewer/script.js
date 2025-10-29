@@ -145,10 +145,13 @@ function createPostElement(post, index) {
         avatarImg.style.height = '100%';
         avatarImg.style.borderRadius = '50%';
         avatarImg.style.objectFit = 'cover';
+        avatarImg.crossOrigin = 'anonymous'; // Try to load with CORS
         avatarImg.onerror = function() {
-            // Fallback to initial letter if image fails
+            // Fallback to initial letter if image fails (likely CORS blocked)
             avatar.textContent = post.user ? post.user.charAt(0).toUpperCase() : '?';
             avatar.style.display = 'flex';
+            avatar.style.background = 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)';
+            console.log('Avatar failed to load for @' + post.user + ' (likely CORS blocked by Instagram)');
         };
         avatar.appendChild(avatarImg);
         avatar.style.background = 'transparent';

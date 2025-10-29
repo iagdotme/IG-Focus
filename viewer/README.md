@@ -184,6 +184,12 @@ For each post, you'll see:
 3. Verify image filenames match those in the JSON file
 4. The viewer will automatically fall back to Instagram URLs if local files fail
 
+### Avatar Images Not Showing
+- **This is normal!** Instagram's CDN blocks loading profile pictures from external websites (CORS policy)
+- The viewer automatically falls back to showing the first letter of the username in a colored circle
+- This is a security feature by Instagram and cannot be bypassed in the browser
+- Downloaded media (posts) will work fine, only external avatar URLs are blocked
+
 ### JSON Parse Error
 - Make sure you selected a valid JSON file
 - Check that the file isn't corrupted
