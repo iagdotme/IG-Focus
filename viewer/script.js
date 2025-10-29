@@ -135,7 +135,26 @@ function createPostElement(post, index) {
 
     const avatar = document.createElement('div');
     avatar.className = 'post-avatar';
-    avatar.textContent = post.user ? post.user.charAt(0).toUpperCase() : '?';
+
+    // Try to load avatar image, fallback to initial
+    if (post.user_avatar_url) {
+        const avatarImg = document.createElement('img');
+        avatarImg.src = post.user_avatar_url;
+        avatarImg.alt = `${post.user}'s avatar`;
+        avatarImg.style.width = '100%';
+        avatarImg.style.height = '100%';
+        avatarImg.style.borderRadius = '50%';
+        avatarImg.style.objectFit = 'cover';
+        avatarImg.onerror = function() {
+            // Fallback to initial letter if image fails
+            avatar.textContent = post.user ? post.user.charAt(0).toUpperCase() : '?';
+            avatar.style.display = 'flex';
+        };
+        avatar.appendChild(avatarImg);
+        avatar.style.background = 'transparent';
+    } else {
+        avatar.textContent = post.user ? post.user.charAt(0).toUpperCase() : '?';
+    }
     avatar.setAttribute('aria-hidden', 'true');
 
     const userInfo = document.createElement('div');
@@ -150,7 +169,7 @@ function createPostElement(post, index) {
 
     const timestamp = document.createElement('div');
     timestamp.className = 'post-timestamp';
-    timestamp.textContent = post.timestamp_human || 'Unknown date';
+    timestamp.textContent = formatDate(post.timestamp_human) || 'Unknown date';
 
     userInfo.appendChild(username);
     userInfo.appendChild(timestamp);
@@ -376,21 +395,94 @@ function updateLightboxContent(post) {
 
         lightboxMedia.appendChild(video);
     } else if (post.media_type_name === 'album' && post.downloaded_files && post.downloaded_files.length > 1) {
-        // Show first image of album
-        const img = document.createElement('img');
-        img.src = getLocalMediaPath(post.downloaded_files[0]);
-        img.alt = post.caption || 'Album image';
-        img.onerror = function() {
-            if (post.thumbnail_url) img.src = post.thumbnail_url;
-        };
-        lightboxMedia.appendChild(img);
+        // Create grid container for all album images
+        const gridContainer = document.createElement('div');
+        gridContainer.style.display = 'grid';
+        gridContainer.style.gridTemplateColumns = 'repeat(auto-fit, minmax(200px, 1fr))';
+        gridContainer.style.gap = '10px';
+        gridContainer.style.maxWidth = '90vw';
+        gridContainer.style.maxHeight = '70vh';
+        gridContainer.style.overflowY = 'auto';
 
-        // Note about album
-        const albumNote = document.createElement('div');
-        albumNote.style.color = 'white';
-        albumNote.style.marginTop = '10px';
-        albumNote.textContent = `📷 Album with ${post.carousel_media_count || post.downloaded_files.length} items (showing first)`;
-        lightboxMedia.appendChild(albumNote);
+        // Show all images/videos in the album
+        post.downloaded_files.forEach((file, idx) => {
+            const itemContainer = document.createElement('div');
+            itemContainer.style.position = 'relative';
+            itemContainer.style.cursor = 'pointer';
+            itemContainer.style.borderRadius = '8px';
+            itemContainer.style.overflow = 'hidden';
+
+            // Check if it's a video or image based on file extension
+            const isVideo = file.toLowerCase().endsWith('.mp4') || file.toLowerCase().endsWith('.mov');
+
+            if (isVideo) {
+                const video = document.createElement('video');
+                video.src = getLocalMediaPath(file);
+                video.style.width = '100%';
+                video.style.height = '200px';
+                video.style.objectFit = 'cover';
+                video.controls = true;
+                video.onerror = function() {
+                    itemContainer.innerHTML = '<div style="background: #333; padding: 20px; color: white;">Video failed to load</div>';
+                };
+                itemContainer.appendChild(video);
+            } else {
+                const img = document.createElement('img');
+                img.src = getLocalMediaPath(file);
+                img.alt = `Album image ${idx + 1}`;
+                img.style.width = '100%';
+                img.style.height = '200px';
+                img.style.objectFit = 'cover';
+                img.style.display = 'block';
+                img.onerror = function() {
+                    if (post.thumbnail_url && idx === 0) {
+                        img.src = post.thumbnail_url;
+                    }
+                };
+
+                // Click to view full size
+                img.addEventListener('click', function() {
+                    const fullImg = document.createElement('img');
+                    fullImg.src = img.src;
+                    fullImg.style.maxWidth = '90vw';
+                    fullImg.style.maxHeight = '90vh';
+                    fullImg.style.objectFit = 'contain';
+
+                    lightboxMedia.innerHTML = '';
+                    lightboxMedia.appendChild(fullImg);
+
+                    // Add back button
+                    const backBtn = document.createElement('button');
+                    backBtn.textContent = '← Back to grid';
+                    backBtn.style.position = 'absolute';
+                    backBtn.style.top = '20px';
+                    backBtn.style.left = '20px';
+                    backBtn.style.background = 'rgba(0,0,0,0.7)';
+                    backBtn.style.color = 'white';
+                    backBtn.style.border = 'none';
+                    backBtn.style.padding = '10px 20px';
+                    backBtn.style.borderRadius = '8px';
+                    backBtn.style.cursor = 'pointer';
+                    backBtn.style.fontSize = '14px';
+                    backBtn.addEventListener('click', () => updateLightboxContent(post));
+                    lightboxMedia.appendChild(backBtn);
+                });
+
+                itemContainer.appendChild(img);
+            }
+
+            gridContainer.appendChild(itemContainer);
+        });
+
+        lightboxMedia.appendChild(gridContainer);
+
+        // Album info
+        const albumInfo = document.createElement('div');
+        albumInfo.style.color = 'white';
+        albumInfo.style.marginTop = '15px';
+        albumInfo.style.textAlign = 'center';
+        albumInfo.textContent = `📷 Album with ${post.downloaded_files.length} items - Click any image to enlarge`;
+        lightboxMedia.appendChild(albumInfo);
     } else {
         const img = document.createElement('img');
 
@@ -464,6 +556,36 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function formatDate(dateString) {
+    if (!dateString) return null;
+
+    try {
+        // Parse the date string (format: "2025-10-23 17:49:37")
+        const date = new Date(dateString.replace(' ', 'T'));
+
+        // Get time (HH:MM)
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        const time = `${hours}:${minutes}`;
+
+        // Get day with ordinal suffix
+        const day = date.getDate();
+        const suffix = ['th', 'st', 'nd', 'rd'][day % 10 > 3 ? 0 : (day % 100 - day % 10 !== 10) * day % 10];
+
+        // Get month name
+        const months = ['January', 'February', 'March', 'April', 'May', 'June',
+                       'July', 'August', 'September', 'October', 'November', 'December'];
+        const month = months[date.getMonth()];
+
+        // Get year
+        const year = date.getFullYear();
+
+        return `${time} | ${day}${suffix} ${month}, ${year}`;
+    } catch (e) {
+        return dateString; // Return original if parsing fails
+    }
 }
 
 // Close lightbox when clicking outside content
