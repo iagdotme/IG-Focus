@@ -78,7 +78,7 @@ Features:
 - ✅ **Human-readable timestamps** - Formatted dates
 - ✅ **Proper media URLs** - Fixed thumbnail/video extraction
 - ✅ **Extended metadata** - Location, verified badges, full names, etc.
-- Auto-saves to timestamped JSON files
+- ✅ **Master feed system** - Single unified feed with automatic merging
 
 **Perfect for:** Archiving your feed, downloading content, analyzing engagement
 
@@ -129,16 +129,25 @@ python simple_example.py
 
 ⚠️ **Note:** This script doesn't support 2FA. Use Option 1 or 2 if you have 2FA enabled.
 
-## Duplicate Detection
+## Master Feed System
 
-When you run the feed reader again, it will:
-- Scan all existing `feed_enhanced_*.json` files
-- Detect posts you've already downloaded (by post ID)
-- Skip duplicates to avoid re-downloading
-- Show which file contains each duplicate
-- Only download new posts
+IG Focus maintains a **single master feed** that gets updated each time you run the script:
 
-This means you can run it daily/weekly to capture new posts without wasting time on duplicates!
+### How It Works
+
+1. **Single Source of Truth**: All posts are stored in `feed_master.json`
+2. **Automatic Merging**: New posts are automatically merged with existing ones
+3. **Duplicate Detection**: Posts are deduplicated by ID - you'll never download the same post twice
+4. **Chronological Order**: The master feed is always sorted chronologically (newest first)
+5. **Timestamped Backups**: Each run creates a backup: `feed_backup_YYYYMMDD_HHMMSS.json`
+
+### Benefits
+
+- **One file to track**: Load `feed_master.json` in the viewer to see your entire archive
+- **Incremental updates**: Run daily/weekly to add new posts without re-downloading
+- **No duplicates**: Automatically skips posts you've already captured
+- **Safe updates**: Backups protect against data loss
+- **Version control friendly**: Optional Git tracking of master feed (backups excluded)
 
 ## What You Can Access
 
@@ -159,17 +168,23 @@ The scripts retrieve posts from your Instagram feed (timeline) including:
 
 ## Output
 
-### JSON Files
-Each run creates a timestamped JSON file:
-- Format: `feed_enhanced_YYYYMMDD_HHMMSS.json`
-- Contains: All post metadata, comments, URLs, timestamps
-- Location: Project root directory
+### Master Feed
+- **File**: `feed_master.json` (updated each run)
+- **Contains**: All posts with metadata, comments, URLs, timestamps
+- **Format**: JSON array of posts, chronologically sorted
+- **Location**: Project root directory
+
+### Backups
+Each run creates a timestamped backup:
+- **Format**: `feed_backup_YYYYMMDD_HHMMSS.json`
+- **Purpose**: Safety net for updates
+- **Auto-excluded**: From Git by default (see `.gitignore`)
 
 ### Downloaded Media
 If media download is enabled:
-- Location: `downloads/` folder
-- Naming: `username_postid.jpg` or `username_postid.mp4`
-- Organized by post for easy reference
+- **Location**: `downloads/` folder
+- **Naming**: `username_postid.jpg` or `username_postid.mp4`
+- **Organized**: By post for easy reference
 
 ## Security Notes
 
@@ -249,6 +264,8 @@ ig/
 ├── README.md                  # This file
 ├── CLAUDE.md                  # Developer guide
 ├── FEATURES.md                # Detailed feature comparison
+├── feed_master.json           # Master feed (updated each run)
+├── feed_backup_*.json         # Timestamped backups (auto-created)
 ├── viewer/                    # Web viewer for viewing feeds
 │   ├── index.html            # Main viewer page
 │   ├── styles.css            # Instagram-like styling
