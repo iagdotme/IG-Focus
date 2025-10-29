@@ -79,94 +79,98 @@ def extract_post_data(cl: Client, media) -> dict:
     # No need to call media_info() which makes an extra API call per post!
     
     try:
-        # Extract from the Media object directly
-        post_id = media.id
-        code = media.code
-        username = media.user.username
-        user_id = str(media.user.pk)
-        user_full_name = media.user.full_name
-        is_verified = media.user.is_verified if hasattr(media.user, 'is_verified') else False
-        user_avatar_url = media.user.profile_pic_url if hasattr(media.user, 'profile_pic_url') else None
-        user_bio = media.user.biography if hasattr(media.user, 'biography') else None
-        caption = media.caption_text
-        likes = media.like_count
-        comments_count = media.comment_count
-        timestamp = int(media.taken_at.timestamp()) if media.taken_at else None
-        timestamp_human = media.taken_at.strftime("%Y-%m-%d %H:%M:%S") if media.taken_at else None
-        media_type = media.media_type
-        media_type_name = {1: "photo", 2: "video", 8: "album"}.get(media_type, str(media_type))
-        thumbnail_url = media.thumbnail_url
-        video_url = media.video_url if hasattr(media, 'video_url') else None
-        carousel_count = len(media.resources) if hasattr(media, 'resources') and media.resources else 0
-        location_name = media.location.name if hasattr(media, 'location') and media.location else None
+        # Check if it's a proper Media object or a dict
+        is_media_object = hasattr(media, 'id') and hasattr(media, 'user')
+        
+        if is_media_object:
+            # Extract from the Media object directly
+            post_id = media.id
+            code = media.code
+            username = media.user.username
+            user_id = str(media.user.pk)
+            user_full_name = media.user.full_name
+            is_verified = media.user.is_verified if hasattr(media.user, 'is_verified') else False
+            user_avatar_url = media.user.profile_pic_url if hasattr(media.user, 'profile_pic_url') else None
+            user_bio = media.user.biography if hasattr(media.user, 'biography') else None
+            caption = media.caption_text
+            likes = media.like_count
+            comments_count = media.comment_count
+            timestamp = int(media.taken_at.timestamp()) if media.taken_at else None
+            timestamp_human = media.taken_at.strftime("%Y-%m-%d %H:%M:%S") if media.taken_at else None
+            media_type = media.media_type
+            media_type_name = {1: "photo", 2: "video", 8: "album"}.get(media_type, str(media_type))
+            thumbnail_url = media.thumbnail_url
+            video_url = media.video_url if hasattr(media, 'video_url') else None
+            carousel_count = len(media.resources) if hasattr(media, 'resources') and media.resources else 0
+            location_name = media.location.name if hasattr(media, 'location') and media.location else None
 
-        # SPONSOR FIELDS - available in feed Media objects
-        is_paid_partnership = media.is_paid_partnership if hasattr(media, 'is_paid_partnership') else False
-        sponsor_tags = []
-        if hasattr(media, 'sponsor_tags') and media.sponsor_tags:
-            sponsor_tags = [{"username": s.username, "user_id": str(s.pk)} for s in media.sponsor_tags]
+            # SPONSOR FIELDS - available in feed Media objects
+            is_paid_partnership = media.is_paid_partnership if hasattr(media, 'is_paid_partnership') else False
+            sponsor_tags = []
+            if hasattr(media, 'sponsor_tags') and media.sponsor_tags:
+                sponsor_tags = [{"username": s.username, "user_id": str(s.pk)} for s in media.sponsor_tags]
 
-        # Additional metadata
-        filter_type = media.filter_type if hasattr(media, 'filter_type') else None
-        has_audio = media.has_audio if hasattr(media, 'has_audio') else None
+            # Additional metadata
+            filter_type = media.filter_type if hasattr(media, 'filter_type') else None
+            has_audio = media.has_audio if hasattr(media, 'has_audio') else None
+        else:
+            # Fallback to dict extraction
+            post_dict = media if isinstance(media, dict) else (media.dict() if hasattr(media, 'dict') else media.__dict__)
+
+            post_id = post_dict.get('id') or post_dict.get('pk')
+            code = post_dict.get('code')
+            user_data = post_dict.get('user', {})
+            username = user_data.get('username') if isinstance(user_data, dict) else str(user_data)
+            user_id = str(user_data.get('pk')) if isinstance(user_data, dict) else None
+            user_full_name = user_data.get('full_name') if isinstance(user_data, dict) else None
+            is_verified = user_data.get('is_verified') if isinstance(user_data, dict) else False
+            user_avatar_url = user_data.get('profile_pic_url') if isinstance(user_data, dict) else None
+            user_bio = user_data.get('biography') if isinstance(user_data, dict) else None
+
+            caption_data = post_dict.get('caption')
+            caption = caption_data.get('text') if isinstance(caption_data, dict) else (post_dict.get('caption_text') or caption_data)
+
+            likes = post_dict.get('like_count', 0)
+            comments_count = post_dict.get('comment_count', 0)
+
+            timestamp = post_dict.get('taken_at')
+            if timestamp:
+                if isinstance(timestamp, int):
+                    dt = datetime.fromtimestamp(timestamp)
+                else:
+                    dt = timestamp
+                timestamp = int(dt.timestamp()) if hasattr(dt, 'timestamp') else timestamp
+                timestamp_human = dt.strftime("%Y-%m-%d %H:%M:%S") if hasattr(dt, 'strftime') else None
+            else:
+                timestamp_human = None
+
+            media_type = post_dict.get('media_type')
+            media_type_name = {1: "photo", 2: "video", 8: "album"}.get(media_type, str(media_type))
+
+            image_versions = post_dict.get('image_versions2', {})
+            candidates = image_versions.get('candidates', [])
+            thumbnail_url = candidates[0].get('url') if candidates else None
+
+            video_versions = post_dict.get('video_versions', [])
+            video_url = video_versions[0].get('url') if video_versions else None
+
+            carousel_count = len(post_dict.get('carousel_media', [])) or len(post_dict.get('resources', []))
+            location = post_dict.get('location')
+            location_name = location.get('name') if location and isinstance(location, dict) else None
+
+            is_paid_partnership = post_dict.get('is_paid_partnership', False)
+            sponsor_tags = []
+            filter_type = post_dict.get('filter_type')
+            has_audio = post_dict.get('has_audio')
 
     except Exception as e:
-        # Fallback to dict extraction if the object doesn't have expected attributes
-        print(f"  Warning: Could not extract from Media object, trying dict: {e}")
-        
-        # Convert to dict if it's an object
-        if hasattr(media, 'dict'):
-            post_dict = media.dict()
-        elif isinstance(media, dict):
-            post_dict = media
-        else:
-            post_dict = media.__dict__
-
-        post_id = post_dict.get('id') or post_dict.get('pk')
-        code = post_dict.get('code')
-        user_data = post_dict.get('user', {})
-        username = user_data.get('username') if isinstance(user_data, dict) else str(user_data)
-        user_id = str(user_data.get('pk')) if isinstance(user_data, dict) else None
-        user_full_name = user_data.get('full_name') if isinstance(user_data, dict) else None
-        is_verified = user_data.get('is_verified') if isinstance(user_data, dict) else False
-        user_avatar_url = user_data.get('profile_pic_url') if isinstance(user_data, dict) else None
-        user_bio = user_data.get('biography') if isinstance(user_data, dict) else None
-
-        caption_data = post_dict.get('caption')
-        caption = caption_data.get('text') if isinstance(caption_data, dict) else (post_dict.get('caption_text') or caption_data)
-
-        likes = post_dict.get('like_count', 0)
-        comments_count = post_dict.get('comment_count', 0)
-
-        timestamp = post_dict.get('taken_at')
-        if timestamp:
-            if isinstance(timestamp, int):
-                dt = datetime.fromtimestamp(timestamp)
-            else:
-                dt = timestamp
-            timestamp = int(dt.timestamp()) if hasattr(dt, 'timestamp') else timestamp
-            timestamp_human = dt.strftime("%Y-%m-%d %H:%M:%S") if hasattr(dt, 'strftime') else None
-        else:
-            timestamp_human = None
-
-        media_type = post_dict.get('media_type')
-        media_type_name = {1: "photo", 2: "video", 8: "album"}.get(media_type, str(media_type))
-
-        image_versions = post_dict.get('image_versions2', {})
-        candidates = image_versions.get('candidates', [])
-        thumbnail_url = candidates[0].get('url') if candidates else None
-
-        video_versions = post_dict.get('video_versions', [])
-        video_url = video_versions[0].get('url') if video_versions else None
-
-        carousel_count = len(post_dict.get('carousel_media', [])) or len(post_dict.get('resources', []))
-        location = post_dict.get('location')
-        location_name = location.get('name') if location and isinstance(location, dict) else None
-
-        is_paid_partnership = post_dict.get('is_paid_partnership', False)
-        sponsor_tags = []
-        filter_type = post_dict.get('filter_type')
-        has_audio = post_dict.get('has_audio')
+        print(f"  ⚠ Warning: Error extracting post data: {e}")
+        # Return minimal data
+        return {
+            "id": "unknown",
+            "error": str(e),
+            "raw_type": str(type(media))
+        }
 
     return {
         "id": str(post_id),
@@ -234,8 +238,20 @@ def get_feed_posts(cl: Client, amount: int = 20) -> list:
                 print(f"  No new posts found, stopping")
                 break
 
+            # Show details of new posts
+            for post in new_posts:
+                try:
+                    # Try to extract basic info for display
+                    username = post.user.username if hasattr(post, 'user') else post.get('user', {}).get('username', 'unknown')
+                    media_type = post.media_type if hasattr(post, 'media_type') else post.get('media_type', 0)
+                    media_name = {1: "photo", 2: "video", 8: "album"}.get(media_type, str(media_type))
+                    caption = (post.caption_text if hasattr(post, 'caption_text') else post.get('caption_text', ''))[:50]
+                    print(f"    • @{username} - {media_name} - {caption}...")
+                except Exception as e:
+                    print(f"    • Post fetched (details hidden)")
+
             all_posts.extend(new_posts)
-            print(f"  Got {len(new_posts)} new posts")
+            print(f"  ✓ Got {len(new_posts)} new posts")
 
             # If we have enough, stop
             if len(all_posts) >= amount:
@@ -254,7 +270,7 @@ def get_feed_posts(cl: Client, amount: int = 20) -> list:
         print(f"✗ Error fetching feed: {e}")
         import traceback
         traceback.print_exc()
-        return all_posts  # Return what we got so far
+        return all_posts  # Return what we got so far  # Return what we got so far
 
 
 def get_post_comments(cl: Client, post_id: str, max_comments: int = 50) -> list:
@@ -303,6 +319,7 @@ def download_media(cl: Client, post_data: dict, download_dir: str = "downloads",
     try:
         if media_type == "photo":
             # Download photo (instagrapi adds extension automatically, so don't include it)
+            print(f"  → Downloading photo...")
             filename = f"{username}_{post_id}"
             filepath = Path(download_dir) / filename
             if download_with_retry(cl.photo_download_by_url, post_data['thumbnail_url'], filepath):
@@ -314,6 +331,7 @@ def download_media(cl: Client, post_data: dict, download_dir: str = "downloads",
 
         elif media_type == "video":
             # Download video (instagrapi adds .mp4 automatically, so don't include it)
+            print(f"  → Downloading video...")
             filename = f"{username}_{post_id}"
             filepath = Path(download_dir) / filename
             if download_with_retry(cl.video_download_by_url, post_data['video_url'], filepath):
@@ -326,25 +344,35 @@ def download_media(cl: Client, post_data: dict, download_dir: str = "downloads",
         elif media_type == "album":
             # Download album - need to get full media info
             media_pk = int(post_id.split('_')[0])
+            print(f"  → Fetching album details...")
             media_info = cl.media_info(media_pk)
 
             if hasattr(media_info, 'resources'):
-                for idx, resource in enumerate(media_info.resources):
+                total_items = len(media_info.resources)
+                print(f"  → Downloading {total_items} items from album...")
+                
+                for idx, resource in enumerate(media_info.resources, 1):
+                    item_type = "photo" if resource.media_type == 1 else "video"
+                    print(f"    [{idx}/{total_items}] Downloading {item_type}...", end=" ")
+                    
                     if resource.media_type == 1:  # Photo
-                        filename = f"{username}_{post_id}_{idx+1}"  # No extension!
+                        filename = f"{username}_{post_id}_{idx}"  # No extension!
                         filepath = Path(download_dir) / filename
                         if download_with_retry(cl.photo_download_by_url, resource.thumbnail_url, filepath):
-                            actual_files = list(Path(download_dir).glob(f"{username}_{post_id}_{idx+1}.*"))
+                            actual_files = list(Path(download_dir).glob(f"{username}_{post_id}_{idx}.*"))
                             if actual_files:
                                 downloaded_files.append(str(actual_files[0]))
+                                print(f"✓ {actual_files[0].name}")
                     elif resource.media_type == 2:  # Video
-                        filename = f"{username}_{post_id}_{idx+1}"  # No extension!
+                        filename = f"{username}_{post_id}_{idx}"  # No extension!
                         filepath = Path(download_dir) / filename
                         if download_with_retry(cl.video_download_by_url, resource.video_url, filepath):
-                            actual_files = list(Path(download_dir).glob(f"{username}_{post_id}_{idx+1}.*"))
+                            actual_files = list(Path(download_dir).glob(f"{username}_{post_id}_{idx}.*"))
                             if actual_files:
                                 downloaded_files.append(str(actual_files[0]))
-                print(f"  ✓ Downloaded album: {len(downloaded_files)} files")
+                                print(f"✓ {actual_files[0].name}")
+                
+                print(f"  ✓ Downloaded album: {len(downloaded_files)}/{total_items} files")
 
     except Exception as e:
         print(f"  ✗ Error downloading media: {e}")
