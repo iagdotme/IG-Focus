@@ -37,10 +37,12 @@ function handleFileSelect(event) {
     reader.onload = function(e) {
         try {
             feedData = JSON.parse(e.target.result);
+            console.log('Loaded feed data:', Array.isArray(feedData) ? `Array with ${feedData.length} posts` : `Object with keys: ${Object.keys(feedData).join(', ')}`);
             hideLoading();
             displayFeed();
         } catch (error) {
             console.error('Error parsing JSON:', error);
+            errorDiv.innerHTML = `<p>❌ Error parsing JSON file: ${error.message}</p><p>Please check the file format.</p>`;
             showError();
         }
     };
@@ -52,7 +54,16 @@ function handleFileSelect(event) {
 
 // Display Feed
 function displayFeed() {
-    if (!feedData || !feedData.posts) {
+    if (!feedData) {
+        showError();
+        return;
+    }
+
+    // Handle both formats: array of posts or object with posts property
+    let posts = Array.isArray(feedData) ? feedData : feedData.posts;
+
+    if (!posts || !Array.isArray(posts) || posts.length === 0) {
+        errorDiv.innerHTML = '<p>❌ No posts found in this feed file.</p>';
         showError();
         return;
     }
@@ -62,7 +73,7 @@ function displayFeed() {
     filtersDiv.style.display = 'flex';
 
     // Initialize filtered posts
-    filteredPosts = feedData.posts;
+    filteredPosts = posts;
     applyFilters();
 }
 
@@ -70,10 +81,14 @@ function displayFeed() {
 function applyFilters() {
     if (!feedData) return;
 
+    // Handle both formats
+    let allPosts = Array.isArray(feedData) ? feedData : feedData.posts;
+    if (!allPosts) return;
+
     const typeValue = typeFilter.value;
     const searchValue = searchFilter.value.toLowerCase().trim();
 
-    filteredPosts = feedData.posts.filter(post => {
+    filteredPosts = allPosts.filter(post => {
         // Type filter
         const typeMatch = typeValue === 'all' || post.media_type_name === typeValue;
 
